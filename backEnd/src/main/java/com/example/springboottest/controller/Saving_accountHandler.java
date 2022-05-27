@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/savingAccount")
 public class Saving_accountHandler {
@@ -27,6 +29,11 @@ public class Saving_accountHandler {
 
     @Autowired
     private BankRepository bankRepository;
+
+    public static boolean isFloatNumber(String str){
+        String reg = "^-?[0-9]+(.[0-9]+)?$";
+        return str.matches(reg);
+    }
 
     @GetMapping("/findAll/{page}/{size}")
     public Page<Saving_account> findAll(@PathVariable("page") Integer page, @PathVariable("size") Integer size)
@@ -50,6 +57,14 @@ public class Saving_accountHandler {
         {
             return "没有这个支行，请检查支行名是否正确";
         }
+        String client_id = saving_account.getClient_id();
+        String bank_name = saving_account.getBank_name();
+        List<Saving_account> saving_accounts = saving_accountRepository.findAll();
+        for(Saving_account saving_account1:saving_accounts)
+        {
+            if(saving_account1.getClient_id().equals(client_id) && saving_account1.getBank_name().equals(bank_name))
+                return "一个客户最多只能在同一个支行拥有一个储蓄账户";
+        }
 
         if(saving_account.getCurrency_type().length()==0)
             saving_account.setCurrency_type("人民币");
@@ -57,6 +72,16 @@ public class Saving_accountHandler {
             saving_account.setBalance("0");
         if(saving_account.getRate().length()==0)
             saving_account.setRate("0.01");
+        if(saving_account.getBalance().length()>0)
+        {
+            if(!isFloatNumber(saving_account.getBalance()))
+                return "余额必须为浮点型数据";
+            else {
+                float balance = Float.parseFloat(saving_account.getBalance());
+                if(balance<0)
+                    return "余额不允许为负数";
+            }
+        }
 
 
         Account account = new Account();
@@ -102,6 +127,16 @@ public class Saving_accountHandler {
             saving_account.setBalance("0");
         if(saving_account.getRate().length()==0)
             saving_account.setRate("0");
+        if(saving_account.getBalance().length()>0)
+        {
+            if(!isFloatNumber(saving_account.getBalance()))
+                return "余额必须为浮点型数据";
+            else {
+                float balance = Float.parseFloat(saving_account.getBalance());
+                if(balance<0)
+                    return "余额不允许为负数";
+            }
+        }
         Saving_account saving_account1= saving_accountRepository.save(saving_account);
         if(saving_account1 != null)
         {

@@ -14,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/checkAccount")
 public class Check_accountHandler {
@@ -30,6 +32,11 @@ public class Check_accountHandler {
     @Autowired
     private BankRepository bankRepository;
 
+    public static boolean isFloatNumber(String str){
+        String reg = "^-?[0-9]+(.[0-9]+)?$";
+        return str.matches(reg);
+    }
+
     @GetMapping("/findAll/{page}/{size}")
     public Page<Check_account> findAll(@PathVariable("page") Integer page, @PathVariable("size") Integer size)
     {
@@ -39,7 +46,8 @@ public class Check_accountHandler {
 
     @PostMapping("/save")
     public String save(@RequestBody Check_account check_account){
-
+        String client_id = check_account.getClient_id();
+        String bank_name = check_account.getBank_name();
         if(!clientRepository.findById(check_account.getClient_id()).isPresent())
         {
             return "数据库中不存在该客户，请先创建该客户";
@@ -52,12 +60,29 @@ public class Check_accountHandler {
         {
             return "没有这个支行，请检查支行名是否正确";
         }
+        List<Check_account> check_accounts = check_accountRepository.findAll();
+        for(Check_account check_account1:check_accounts)
+        {
+            if(check_account1.getClient_id().equals(client_id) && check_account1.getBank_name().equals(bank_name))
+                return "一个客户最多只能在同一个支行拥有一个支票账户";
+        }
+
 
 
         if(check_account.getBalance().length()==0)
             check_account.setBalance("0");
         if(check_account.getOverdraft().length()==0)
             check_account.setOverdraft("0");
+        if(check_account.getBalance().length()>0)
+        {
+            if(!isFloatNumber(check_account.getBalance()))
+                return "余额必须为浮点型数据";
+            else {
+                float balance = Float.parseFloat(check_account.getBalance());
+                if(balance<0)
+                    return "余额不允许为负数";
+            }
+        }
 
 
         Account account = new Account();
@@ -102,6 +127,16 @@ public class Check_accountHandler {
             check_account.setBalance("0");
         if(check_account.getOverdraft().length()==0)
             check_account.setOverdraft("0");
+        if(check_account.getBalance().length()>0)
+        {
+            if(!isFloatNumber(check_account.getBalance()))
+                return "余额必须为浮点型数据";
+            else {
+                float balance = Float.parseFloat(check_account.getBalance());
+                if(balance<0)
+                    return "余额不允许为负数";
+            }
+        }
         Check_account check_account1= check_accountRepository.save(check_account);
         if(check_account1 != null)
         {

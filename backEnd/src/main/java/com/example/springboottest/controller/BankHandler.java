@@ -1,12 +1,8 @@
 package com.example.springboottest.controller;
 
-import com.example.springboottest.entity.Bank;
-import com.example.springboottest.entity.Check_account;
-import com.example.springboottest.entity.Saving_account;
+import com.example.springboottest.entity.*;
 import com.example.springboottest.helpClass.*;
-import com.example.springboottest.repository.BankRepository;
-import com.example.springboottest.repository.Check_accountRepository;
-import com.example.springboottest.repository.Saving_accountRepository;
+import com.example.springboottest.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +28,9 @@ public class BankHandler {
 
     @Autowired
     private Check_accountRepository check_accountRepository;
+
+    @Autowired
+    private LoanRepository loanRepository;
 
     public int getYear(String input)
     {
@@ -467,6 +466,212 @@ public class BankHandler {
             float amount = Float.parseFloat(check_account.getBalance());
             float temp_account =statisticsByMonths.get(index).getAmount();
             statisticsByMonths.get(index).set.add(check_account.getClient_id());
+            int temp_clients = statisticsByMonths.get(index).set.size();
+            statisticsByMonths.get(index).setNumClients(temp_clients);
+            statisticsByMonths.get(index).setAmount(temp_account+amount);
+        }
+        StaticsByMonthWithTotalElements staticsByMonthWithTotalElements = new StaticsByMonthWithTotalElements();
+        staticsByMonthWithTotalElements.totalElements = statisticsByMonths.size();
+        staticsByMonthWithTotalElements.statisticsByMonths = new ArrayList<>();
+        for(int j=size*(page-1);j< statisticsByMonths.size() && j<size*page;j++)
+        {
+            staticsByMonthWithTotalElements.statisticsByMonths.add(statisticsByMonths.get(j));
+        }
+        return staticsByMonthWithTotalElements;
+    }
+    @Autowired
+    Loan_payRepository loan_payRepository;
+
+    @Autowired
+    Client_get_loanRepository client_get_loanRepository;
+
+    @GetMapping("/findLoanPayYear/{page}/{size}")
+    public StaticsByYearWithTotalElements findLoanYearPage(@PathVariable("page") Integer page, @PathVariable("size") Integer size){
+        List<StatisticsByYear> statisticsByYears = new ArrayList<>();
+        List<Loan_pay> loan_pays = loan_payRepository.findAll();
+        List<Bank> banks = bankRepository.findAll();
+        int min_year,max_year;
+        Loan_pay loan_pay_initialize = loan_pays.get(0);
+        min_year = getYear(loan_pay_initialize.getPay_date());
+        max_year = min_year;
+
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            int year = getYear(loan_pay.getPay_date());
+            if(year<min_year)
+                min_year = year;
+            if(year>max_year)
+                max_year = year;
+        }
+        for (Bank bank : banks) {
+            for (int i = min_year; i <= max_year; i++) {
+                StatisticsByYear statisticsByYear = new StatisticsByYear();
+                statisticsByYear.setYear(i);
+                statisticsByYear.setAmount(0);
+                statisticsByYear.setBank_name(bank.getBank_name());
+                statisticsByYear.setNumClients(0);
+                statisticsByYear.set = new HashSet<>();
+                statisticsByYears.add(statisticsByYear);
+            }
+        }
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            String bank_name = loan_pay.getBank_name();
+            int year = getYear(loan_pay.getPay_date());
+            int i;
+            for(i=0;i< banks.size();i++)
+            {
+                if(banks.get(i).getBank_name().equals(bank_name))
+                    break;
+            }
+            int index = year-min_year +i*(max_year-min_year+1);
+            float amount = Float.parseFloat(loan_pay.getPay_amount());
+            float temp_account =statisticsByYears.get(index).getAmount();
+            List<Client_get_loan> client_get_loans = client_get_loanRepository.findAll();
+            for(Client_get_loan client_get_loan:client_get_loans)
+            {
+                if(client_get_loan.getLoan_id().equals(loan_pay.getLoan_id()))
+                    statisticsByYears.get(index).set.add(client_get_loan.getClient_id());
+            }
+
+            int temp_clients = statisticsByYears.get(index).set.size();
+            statisticsByYears.get(index).setNumClients(temp_clients);
+            statisticsByYears.get(index).setAmount(temp_account+amount);
+        }
+        StaticsByYearWithTotalElements staticsByYearWithTotalElements = new StaticsByYearWithTotalElements();
+        staticsByYearWithTotalElements.totalElements = statisticsByYears.size();
+        staticsByYearWithTotalElements.statisticsByYears = new ArrayList<>();
+        for(int j=size*(page-1);j< statisticsByYears.size() && j<size*page;j++)
+        {
+            staticsByYearWithTotalElements.statisticsByYears.add(statisticsByYears.get(j));
+        }
+        return staticsByYearWithTotalElements;
+    }
+
+    @GetMapping("/findLoanPaySeason/{page}/{size}")
+    public StaticsBySeasonWithTotalElements findLoanSeasonPage(@PathVariable("page") Integer page, @PathVariable("size") Integer size){
+        List<StatisticsBySeason> statisticsBySeasons = new ArrayList<>();
+        List<Loan_pay> loan_pays = loan_payRepository.findAll();
+        List<Bank> banks = bankRepository.findAll();
+        int min_year,max_year;
+        Loan_pay loan_pay_initialize = loan_pays.get(0);
+        min_year = getYear(loan_pay_initialize.getPay_date());
+        max_year = min_year;
+        String[] season={"春","夏","秋","冬"};
+
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            int year = getYear(loan_pay.getPay_date());
+            if(year<min_year)
+                min_year = year;
+            if(year>max_year)
+                max_year = year;
+        }
+        for (Bank bank : banks) {
+            for (int i = min_year; i <= max_year; i++) {
+                for(int j=0;j<=3;j++)
+                {
+                    StatisticsBySeason statisticsBySeason = new StatisticsBySeason();
+                    statisticsBySeason.setAmount(0);
+                    statisticsBySeason.setBank_name(bank.getBank_name());
+                    statisticsBySeason.setNumClients(0);
+                    statisticsBySeason.set = new HashSet<>();
+                    statisticsBySeason.setYearWithSeason(String.valueOf(i)+"年"+season[j]);
+                    statisticsBySeasons.add(statisticsBySeason);
+                }
+            }
+        }
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            String bank_name = loan_pay.getBank_name();
+            int year = getYear(loan_pay.getPay_date());
+            int temp_season = getSeason(loan_pay.getPay_date());
+            int i;
+            for(i=0;i< banks.size();i++)
+            {
+                if(banks.get(i).getBank_name().equals(bank_name))
+                    break;
+            }
+
+            int index = temp_season+(year-min_year)*4 +i*(max_year-min_year+1)*4;
+            float amount = Float.parseFloat(loan_pay.getPay_amount());
+            float temp_account =statisticsBySeasons.get(index).getAmount();
+            List<Client_get_loan> client_get_loans = client_get_loanRepository.findAll();
+            for(Client_get_loan client_get_loan:client_get_loans)
+            {
+                if(client_get_loan.getLoan_id().equals(loan_pay.getLoan_id()))
+                    statisticsBySeasons.get(index).set.add(client_get_loan.getClient_id());
+            }
+
+            int temp_clients = statisticsBySeasons.get(index).set.size();
+            statisticsBySeasons.get(index).setNumClients(temp_clients);
+            statisticsBySeasons.get(index).setAmount(temp_account+amount);
+        }
+        StaticsBySeasonWithTotalElements staticsBySeasonWithTotalElements = new StaticsBySeasonWithTotalElements();
+        staticsBySeasonWithTotalElements.totalElements = statisticsBySeasons.size();
+        staticsBySeasonWithTotalElements.statisticsBySeasons = new ArrayList<>();
+        for(int j=size*(page-1);j< statisticsBySeasons.size() && j<size*page;j++)
+        {
+            staticsBySeasonWithTotalElements.statisticsBySeasons.add(statisticsBySeasons.get(j));
+        }
+        return staticsBySeasonWithTotalElements;
+    }
+
+    @GetMapping("/findLoanPayMonth/{page}/{size}")
+    public StaticsByMonthWithTotalElements findLoanMonthPage(@PathVariable("page") Integer page, @PathVariable("size") Integer size){
+        List<StatisticsByMonth> statisticsByMonths = new ArrayList<>();
+        List<Loan_pay> loan_pays = loan_payRepository.findAll();
+        List<Bank> banks = bankRepository.findAll();
+        int min_year,max_year;
+        Loan_pay loan_pay_initialize = loan_pays.get(0);
+        min_year = getYear(loan_pay_initialize.getPay_date());
+        max_year = min_year;
+
+
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            int year = getYear(loan_pay.getPay_date());
+            if(year<min_year)
+                min_year = year;
+            if(year>max_year)
+                max_year = year;
+        }
+        for (Bank bank : banks) {
+            for (int i = min_year; i <= max_year; i++) {
+                for(int j=1;j<=12;j++)
+                {
+                    StatisticsByMonth statisticsByMonth = new StatisticsByMonth();
+                    statisticsByMonth.setAmount(0);
+                    statisticsByMonth.setBank_name(bank.getBank_name());
+                    statisticsByMonth.setNumClients(0);
+                    statisticsByMonth.set = new HashSet<>();
+                    statisticsByMonth.setYearWithMonth(String.valueOf(i)+"年"+String.valueOf(j)+"月");
+                    statisticsByMonths.add(statisticsByMonth);
+                }
+            }
+        }
+        for(Loan_pay loan_pay:loan_pays)
+        {
+            String bank_name = loan_pay.getBank_name();
+            int year = getYear(loan_pay.getPay_date());
+            int month = getMonth(loan_pay.getPay_date());
+            int i;
+            for(i=0;i< banks.size();i++)
+            {
+                if(banks.get(i).getBank_name().equals(bank_name))
+                    break;
+            }
+
+            int index = month-1+(year-min_year)*12 +i*(max_year-min_year+1)*12;
+            float amount = Float.parseFloat(loan_pay.getPay_amount());
+            float temp_account =statisticsByMonths.get(index).getAmount();
+            List<Client_get_loan> client_get_loans = client_get_loanRepository.findAll();
+            for(Client_get_loan client_get_loan:client_get_loans)
+            {
+                if(client_get_loan.getLoan_id().equals(loan_pay.getLoan_id()))
+                    statisticsByMonths.get(index).set.add(client_get_loan.getClient_id());
+            }
+
             int temp_clients = statisticsByMonths.get(index).set.size();
             statisticsByMonths.get(index).setNumClients(temp_clients);
             statisticsByMonths.get(index).setAmount(temp_account+amount);

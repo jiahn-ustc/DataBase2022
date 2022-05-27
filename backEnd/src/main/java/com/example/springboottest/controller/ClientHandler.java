@@ -39,6 +39,12 @@ public class ClientHandler {
         Matcher mer = Pattern.compile("^[0-9]+$").matcher(input);
         return mer.find();
     }
+    public static boolean isAllChinese(String str) {
+        if (str == null) { return false; }
+        Pattern p = Pattern.compile("[\u4e00-\u9fa5]+");
+        Matcher m = p.matcher(str);
+        return m.matches();
+    }
 
     @GetMapping("/findAll/{page}/{size}")
     public Page<Client> findAll(@PathVariable("page") Integer page, @PathVariable("size") Integer size)
@@ -52,17 +58,30 @@ public class ClientHandler {
         String client_id = client.getClient_id();
         String tel = client.getTel();
         String address = client.getAddress();
+        String name = client.getName();
         if(!isInteger(client_id))
         {
             return "身份证号必须全是数字";
+        }
+        else if(client_id.length()>18)
+        {
+            return "身份证号必须小于18位";
         }
         else if(!isInteger(tel))
         {
             return "手机号必须全是数字";
         }
+        else if(tel.length()>11)
+        {
+            return "手机号必须小于11位";
+        }
         else if(address.length()>32)
         {
             return "地址不能超过32个字符";
+        }
+        else if(!isAllChinese(name))
+        {
+            return "客户姓名必须全是中文";
         }
         else {
             Optional<Client> O = clientRepository.findById(client.getClient_id());
@@ -84,6 +103,7 @@ public class ClientHandler {
         String client_id = client.getClient_id();
         String tel = client.getTel();
         String address = client.getAddress();
+        String name = client.getName();
         if(!isInteger(client_id))
         {
             return "身份证号必须全是数字";
@@ -92,9 +112,25 @@ public class ClientHandler {
         {
             return "手机号必须全是数字";
         }
+        else if(client_id.length()>18)
+        {
+            return "身份证号必须小于18位";
+        }
+        else if(!isInteger(tel))
+        {
+            return "手机号必须全是数字";
+        }
+        else if(tel.length()>11)
+        {
+            return "手机号必须小于11位";
+        }
         else if(address.length()>32)
         {
             return "地址不能超过32个字符";
+        }
+        else if(!isAllChinese(name))
+        {
+            return "客户姓名必须全是中文";
         }
         else {
             Client result = clientRepository.save(client);
